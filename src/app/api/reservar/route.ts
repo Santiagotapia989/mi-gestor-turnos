@@ -78,14 +78,14 @@ export async function POST(request: Request) {
     });
 
     // Send confirmation email via Resend (without failing the booking if it errors)
-    if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
-      try {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        await resend.emails.send({
-          from: process.env.EMAIL_FROM,
-          to: [clienteEmail],
-          subject: `Confirmación de reserva - ${servicio}`,
-          text: `Hola ${clienteNombre},
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const emailResult = await resend.emails.send({
+        from:
+          process.env.EMAIL_FROM || "onboarding@resend.dev",
+        to: [clienteEmail],
+        subject: `Confirmación de reserva - ${servicio}`,
+        text: `Hola ${clienteNombre},
 
 Tu turno fue reservado con exito. Estos son los datos:
 
@@ -99,10 +99,10 @@ Si necesitas modificar o cancelar tu turno, no dudes en contactarnos.
 
 Saludos,
 Centro Medico Digital`,
-        });
-      } catch (error) {
-        console.error("[email] Error enviando confirmación:", error);
-      }
+      });
+      console.log("Resend Result:", emailResult);
+    } catch (error) {
+      console.error("Error enviando mail con Resend:", error);
     }
 
     return NextResponse.json(
