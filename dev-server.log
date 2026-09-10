@@ -1,0 +1,23 @@
+
+> mi-gestor-turnos@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 2.5s
+ ○ Compiling / ...
+ ✓ Compiled / in 4.1s (544 modules)
+ GET / 200 in 4367ms
+ ✓ Compiled in 416ms (265 modules)
+ GET / 200 in 47ms
+ GET / 200 in 58ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 727ms (311 modules)
+ GET /favicon.ico 200 in 968ms
+ GET /favicon.ico 200 in 17ms
+ GET /favicon.ico 200 in 15ms
+ ✓ Compiled /api/reservar in 287ms (336 modules)
+[n8n webhook] status: 200 | body: { message: 'Workflow was started' }
+ POST /api/reservar 200 in 437ms
