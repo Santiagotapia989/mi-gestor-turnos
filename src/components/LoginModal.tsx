@@ -46,9 +46,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
         ? { nombre: name, email, password }
         : { email, password };
 
-      const response = await fetch(
-        `http://localhost:5678/webhook/${endpoint}`,
-        {
+      const response = await fetch(`/api/${endpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

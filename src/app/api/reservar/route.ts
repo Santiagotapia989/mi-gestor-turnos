@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { Resend } from "resend";
 
 interface ReservaData {
   servicio: string;
-  servicioId: string;
+  servicioId?: string;
   fecha: string;
   hora: string;
-  duracion: number;
-  precio: number;
+  duracion?: number;
+  precio?: number;
   clienteNombre: string;
   clienteEmail: string;
   clienteTelefono: string;
-  notas: string;
+  notas?: string;
 }
 
 export async function POST(request: Request) {
@@ -50,55 +52,57 @@ export async function POST(request: Request) {
       );
     }
 
-    // Send data to n8n webhook
-    const n8nResponse = await fetch(
-      "http://localhost:5678/webhook/nuevo-turno",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          servicio,
-          servicioId: body.servicioId,
-          fecha,
-          hora,
-          duracion: body.duracion,
-          precio: body.precio,
-          clienteNombre,
-          clienteEmail,
-          clienteTelefono,
-          notas: body.notas,
-          fechaCreacion: new Date().toISOString(),
-        }),
-      }
-    );
-
-    // Log the response received from n8n (status + body, even if empty)
-    let n8nBody: unknown = null;
-    try {
-      const rawBody = await n8nResponse.text();
-      n8nBody = rawBody ? JSON.parse(rawBody) : null;
-    } catch {
-      n8nBody = null;
-    }
-    console.log(
-      "[n8n webhook] status:",
-      n8nResponse.status,
-      "| body:",
-      n8nBody
-    );
-
-    // Only report success to the frontend if n8n responded with 200 or 201
-    if (n8nResponse.status !== 200 && n8nResponse.status !== 201) {
-      console.warn("n8n webhook responded with status:", n8nResponse.status);
+    // Validate fecha format
+    const fechaDate = new Date(fecha);
+    if (isNaN(fechaDate.getTime())) {
       return NextResponse.json(
-        {
-          error: "El servicio de reservas no respondió correctamente",
-          status: n8nResponse.status,
-        },
-        { status: 502 }
+        { error: "El formato de la fecha no es válido" },
+        { status: 400 }
       );
+    }
+
+    // Save reservation to the database
+    const reserva = await prisma.reserva.create({
+      data: {
+        servicio,
+        servicioId: body.servicioId || "",
+        fecha: fechaDate,
+        hora,
+        duracion: body.duracion || 0,
+        precio: body.precio || 0,
+        clienteNombre,
+        clienteEmail,
+        clienteTelefono,
+        notas: body.notas || null,
+      },
+    });
+
+    // Send confirmation email via Resend (without failing the booking if it errors)
+    if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: process.env.EMAIL_FROM,
+          to: [clienteEmail],
+          subject: `Confirmación de reserva - ${servicio}`,
+          text: `Hola ${clienteNombre},
+
+Tu turno fue reservado con exito. Estos son los datos:
+
+- Servicio: ${servicio}
+- Fecha: ${fecha}
+- Hora: ${hora}
+- Duracion: ${body.duracion ? `${body.duracion} min` : "-"}
+- Precio: ${body.precio ? `$${body.precio}` : "-"}
+
+Si necesitas modificar o cancelar tu turno, no dudes en contactarnos.
+
+Saludos,
+Centro Medico Digital`,
+        });
+      } catch (error) {
+        console.error("[email] Error enviando confirmación:", error);
+      }
     }
 
     return NextResponse.json(
@@ -106,6 +110,7 @@ export async function POST(request: Request) {
         success: true,
         message: "Reserva procesada exitosamente",
         reserva: {
+          id: reserva.id,
           servicio,
           fecha,
           hora,

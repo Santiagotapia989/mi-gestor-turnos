@@ -16,6 +16,7 @@ import {
   MapPin,
   LogOut,
   CheckCircle,
+  Download,
 } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 import QuickAccess, { type PanelId } from "@/components/QuickAccess";
@@ -154,6 +155,27 @@ export default function Home() {
     showToast("Cerraste sesión correctamente");
   };
 
+  const handleDescargarExcel = async () => {
+    try {
+      const response = await fetch("/api/exportar-turnos");
+      if (!response.ok) throw new Error("No se pudo generar el Excel");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "turnos.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast("Turnos exportados correctamente");
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Error al exportar los turnos"
+      );
+    }
+  };
+
   const handleVerMasEspecialidad = (especialidad: string) => {
     setCartillaEspecialidad(especialidad);
     setQuickPanel("cartilla");
@@ -194,6 +216,13 @@ export default function Home() {
               >
                 <LogOut className="w-4 h-4" />
                 Cerrar sesion
+              </button>
+              <button
+                onClick={handleDescargarExcel}
+                className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors font-medium flex items-center gap-1"
+              >
+                <Download className="w-4 h-4" />
+                Descargar Excel
               </button>
               <button
                 onClick={() => setShowBooking(false)}
